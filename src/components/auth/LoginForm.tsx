@@ -9,35 +9,40 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth"
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const { signIn, signInWithGithub } = useAuth()
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate login process
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Here you would typically handle authentication
-    console.log("Logging in with:", email, password)
-
-    setIsLoading(false)
+    try {
+      await signIn(email, password)
+      // 로그인 성공 시 메인 페이지로 이동 (추후 구현)
+    } catch (error) {
+      console.error("로그인 오류:", error)
+      alert("로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGithubLogin = async () => {
     setIsLoading(true)
 
-    // Simulate GitHub OAuth process
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Here you would typically redirect to GitHub OAuth
-    console.log("Logging in with GitHub")
-
-    setIsLoading(false)
+    try {
+      await signInWithGithub()
+      // GitHub OAuth 리다이렉션이 발생하므로 여기서는 추가 처리가 필요 없음
+    } catch (error) {
+      console.error("GitHub 로그인 오류:", error)
+      alert("GitHub 로그인에 실패했습니다.")
+      setIsLoading(false)
+    }
   }
 
   return (
