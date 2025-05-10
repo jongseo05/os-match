@@ -83,11 +83,10 @@ export default function ParticleCanvas() {
       return osMatchScale
     }
 
-    function createParticle(scale: number) {
+    function createParticle() {
       if (!ctx || !canvas || !textImageData) return null
 
       const data = textImageData.data
-      const particleGap = 2
 
       for (let attempt = 0; attempt < 100; attempt++) {
         const x = Math.floor(Math.random() * canvas.width)
@@ -120,7 +119,7 @@ export default function ParticleCanvas() {
       }
     }
 
-    function createInitialParticles(scale: number) {
+    function createInitialParticles() {
       if (!canvas || !ctx) return;
       
       const baseParticleCount = 5000 // Reduced for better performance
@@ -131,14 +130,14 @@ export default function ParticleCanvas() {
       const particleCount = Math.floor(baseParticleCount * scaleFactor);
       
       for (let i = 0; i < particleCount; i++) {
-        const particle = createParticle(scale)
+        const particle = createParticle()
         if (particle) particles.push(particle)
       }
     }
 
     let animationFrameId: number
 
-    function animate(scale: number) {
+    function animate() {
       if (!ctx || !canvas) return
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.fillStyle = "black"
@@ -157,7 +156,7 @@ export default function ParticleCanvas() {
 
         p.life--
         if (p.life <= 0) {
-          const newParticle = createParticle(scale)
+          const newParticle = createParticle()
           if (newParticle) {
             particles[i] = newParticle
           } else {
@@ -172,26 +171,26 @@ export default function ParticleCanvas() {
         baseParticleCount * Math.sqrt((canvas.width * canvas.height) / (1920 * 1080)),
       )
       while (particles.length < targetParticleCount) {
-        const newParticle = createParticle(scale)
+        const newParticle = createParticle()
         if (newParticle) particles.push(newParticle)
       }
 
-      animationFrameId = requestAnimationFrame(() => animate(scale))
+      animationFrameId = requestAnimationFrame(() => animate())
     }
 
     // Wait for canvas to be ready before initializing
     if (canvasReady) {
-      const scale = createTextImage()
-      createInitialParticles(scale)
-      animate(scale)
+      createTextImage()
+      createInitialParticles()
+      animate()
     }
 
     const handleResize = () => {
       updateCanvasSize()
       if (canvasReady) {
-        const newScale = createTextImage()
+        createTextImage()
         particles = []
-        createInitialParticles(newScale)
+        createInitialParticles()
       }
     }
 

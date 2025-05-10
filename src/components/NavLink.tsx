@@ -6,10 +6,9 @@ interface NavLinkProps {
   icon: LucideIcon
   label: string
   mobile?: boolean
-  isBold?: boolean
 }
 
-export default function NavLink({ href, icon: Icon, label, mobile = false , isBold = false }: NavLinkProps) {
+export default function NavLink({ href, icon: Icon, label, mobile = false }: NavLinkProps) {
   const baseClasses = "group flex items-center text-gray-300 transition-all duration-300 ease-in-out"
   const desktopClasses = "px-3 py-2 rounded-md text-sm font-medium"
   const mobileClasses = "px-3 py-2 rounded-md text-base font-medium"
@@ -26,5 +25,6 @@ export default function NavLink({ href, icon: Icon, label, mobile = false , isBo
         <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-400 group-hover:w-full transition-all duration-300 ease-in-out"></span>
       </span>
     </Link>
+
   )
 }
