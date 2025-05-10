@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase/supabase';
 
 // context를 통해 제공할 타입 정의의
 type AuthContextType = {

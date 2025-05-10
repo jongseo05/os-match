@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
+import Link from "next/link"
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -42,17 +42,17 @@ export default function LoginForm() {
 
   return (
     <Card className="bg-black/70 backdrop-blur-md border border-gray-800">
-      <CardHeader className="space-y-2 flex flex-col items-center">
-        <div className="w-48 mb-4">
+      <CardHeader className="space-y-1 flex flex-col items-center py-5">
+        <div className="w-48 mb-2">
           <span className="text-emerald-500 font-bold text-xl">OS-Match</span>
         </div>
         <CardTitle className="text-2xl font-bold text-white">Sign in to your account</CardTitle>
         <CardDescription className="text-gray-400">Enter your credentials to access your account</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <form onSubmit={handleEmailLogin} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-gray-300">
+      <CardContent className="space-y-3 pt-0">
+        <form onSubmit={handleEmailLogin} className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-gray-300 text-sm">
               Email
             </Label>
             <Input
@@ -62,15 +62,15 @@ export default function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-gray-900/60 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500"
+              className="bg-gray-900/60 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500 h-9"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-gray-300">
+              <Label htmlFor="password" className="text-gray-300 text-sm">
                 Password
               </Label>
-              <a href="#" className="text-sm font-medium text-emerald-500 hover:text-emerald-400 transition-colors">
+              <a href="#" className="text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors">
                 Forgot password?
               </a>
             </div>
@@ -81,13 +81,13 @@ export default function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="bg-gray-900/60 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500"
+              className="bg-gray-900/60 border-gray-700 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:ring-emerald-500 h-9"
             />
           </div>
           <Button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white transition-colors duration-300"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white transition-colors duration-300 h-9 mt-1"
           >
             {isLoading ? "Signing in..." : "Sign in"}
           </Button>
@@ -106,18 +106,18 @@ export default function LoginForm() {
           variant="outline"
           onClick={handleGithubLogin}
           disabled={isLoading}
-          className="w-full border-gray-700 bg-gray-900/60 text-white hover:bg-gray-800 hover:text-emerald-400 transition-all duration-300"
+          className="w-full border-gray-700 bg-gray-900/60 text-white hover:bg-gray-800 hover:text-emerald-400 transition-all duration-300 h-9"
         >
-          <Github className="mr-2 h-5 w-5 text-emerald-500" />
+          <Github className="mr-2 h-4 w-4 text-emerald-500" />
           GitHub
         </Button>
       </CardContent>
-      <CardFooter className="flex flex-col space-y-2 border-t border-gray-800 pt-4">
+      <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">
         <p className="text-center text-sm text-gray-500">
           Don't have an account?{" "}
-          <a href="#" className="font-medium text-emerald-500 hover:text-emerald-400 transition-colors">
+          <Link href="/signup" className="font-medium text-emerald-500 hover:text-emerald-400 transition-colors">
             Sign up
-          </a>
+          </Link>
         </p>
         <p className="text-center text-xs text-gray-600">
           By signing in, you agree to our{" "}

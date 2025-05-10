@@ -1,22 +1,36 @@
+'use client'
+
 import { useState } from "react"
 import { User, Menu, X, Home, Layers, GitPullRequest, History } from "lucide-react"
 import NavLink from "./NavLink"
 import LoginModal from "../components/auth/LoginModal"
+import SignUpModal from "../components/auth/SignUpModal"
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [signUpModalOpen, setSignUpModalOpen] = useState(false)
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen)
   }
 
   const openLoginModal = () => {
+    setSignUpModalOpen(false)
     setLoginModalOpen(true)
   }
 
   const closeLoginModal = () => {
     setLoginModalOpen(false)
+  }
+  
+  const openSignUpModal = () => {
+    setLoginModalOpen(false)
+    setSignUpModalOpen(true)
+  }
+  
+  const closeSignUpModal = () => {
+    setSignUpModalOpen(false)
   }
 
   const navItems = [
@@ -99,7 +113,17 @@ export default function Navbar() {
         </div>
       </nav>
 
-      <LoginModal isOpen={loginModalOpen} onClose={closeLoginModal} />
+      {/* Auth Modals */}
+      <LoginModal 
+        isOpen={loginModalOpen} 
+        onClose={closeLoginModal} 
+        onSignUpClick={openSignUpModal}
+      />
+      <SignUpModal 
+        isOpen={signUpModalOpen} 
+        onClose={closeSignUpModal}
+        onLoginClick={openLoginModal}
+      />
     </>
   )
 }
