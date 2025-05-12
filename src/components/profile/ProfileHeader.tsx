@@ -61,7 +61,7 @@ export default function ProfileHeader({ userData, onUpdate }: ProfileHeaderProps
           <div className="relative group">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-black bg-black">
               <Image
-                src={previewImage || userData.profileImage}
+                src={previewImage || "/dev_profile.png"}
                 alt="Profile"
                 width={96}
                 height={96}
