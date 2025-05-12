@@ -1,0 +1,48 @@
+name: ✨ Feature Request
+description: 새로운 기능을 제안하거나 구현이 필요한 기능을 요청할 때 사용하세요.
+title: "[Feature] "
+labels: [enhancement]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## ✨ 기능 요청 양식
+        제안하는 기능에 대한 상세한 설명을 부탁드립니다. 가능한 경우 배경, 목적, 기대 효과 등을 포함해주세요.
+
+  - type: input
+    id: summary
+    attributes:
+      label: 기능 요약
+      description: 한 줄로 기능의 핵심을 요약해 주세요.
+      placeholder: "예: 사용자가 기술 스택을 태그 형태로 입력할 수 있도록 함"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 기능 설명
+      description: 해당 기능이 어떤 역할을 하며 어떻게 작동해야 하는지 구체적으로 작성해주세요.
+      placeholder: |
+        예: 사용자 프로필 설정 화면에서 기술 스택을 태그 형태로 입력/삭제할 수 있는 UI를 구현해야 합니다.
+    validations:
+      required: true
+
+
+  - type: textarea
+    id: expected-impact
+    attributes:
+      label: 기대 효과 / 고려 사항
+      description: 해당 기능이 구현되면 어떤 변화가 있을까요? 예상되는 유저 반응, 성능 이슈, 고려할 점 등을 작성해주세요.
+      placeholder: |
+        예: 사용자 경험 향상, 필터링 정확도 개선, 태그 관련 검색 기능 강화 필요
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 체크리스트
+      options:
+        - label: 이슈가 중복되지 않음을 확인했습니다.
+        - label: 핵심 기능과 부가 기능을 구분하여 설명했습니다.
+        - label: 고려할 UI/UX 또는 기술적 요구사항을 포함했습니다.
