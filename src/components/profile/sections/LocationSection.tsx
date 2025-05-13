@@ -129,10 +129,11 @@ export default function LocationSection({ userData, onUpdate }: LocationSectionP
       )}
 
       <div className="mt-6 p-4 bg-gray-900/60 rounded-md border border-gray-700">
-        <h3 className="text-lg font-medium text-white mb-3">Timezone Map</h3>
-        <div className="relative h-48 bg-black/50 rounded-md overflow-hidden">
+        <h3 className="text-lg font-medium text-white mb-3">Timezone Map</h3>        <div className="relative h-48 bg-black/50 rounded-md overflow-hidden">
           {/* World map visualization - simplified for this example */}
-          <div className="absolute inset-0 opacity-20 bg-[url('/world-map-dark.png')] bg-no-repeat bg-center bg-contain"></div>
+          <div className="absolute inset-0 opacity-20 flex items-center justify-center">
+            <img src="/globe.svg" alt="World Map" className="opacity-20 w-16 h-16" />
+          </div>
           <div
             className="absolute h-4 w-4 rounded-full bg-emerald-500 border-2 border-black"
             style={{

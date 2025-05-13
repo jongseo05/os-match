@@ -22,4 +22,6 @@ export interface UserData {
   }
   // TechnicalSkillsSection.tsx에서 필요한 skills 속성 추가
   skills: Skill[]
+  // 계정 생성 날짜 정보 추가
+  accountCreatedAt?: string
 }
