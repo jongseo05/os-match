@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase/supabase"
 
@@ -20,11 +19,9 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose, onSignUpClick }: LoginModalProps) {
   const { signIn } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
-  const [email, setEmail] = useState("")
+  const [isLoading, setIsLoading] = useState(false)  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault()

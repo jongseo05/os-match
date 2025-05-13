@@ -6,10 +6,9 @@ interface NavLinkProps {
   icon: LucideIcon
   label: string
   mobile?: boolean
-  isBold?: boolean
 }
 
-export default function NavLink({ href, icon: Icon, label, mobile = false , isBold = false }: NavLinkProps) {
+export default function NavLink({ href, icon: Icon, label, mobile = false }: NavLinkProps) {
   const baseClasses = "group flex items-center text-gray-300 transition-all duration-300 ease-in-out"
   const desktopClasses = "px-3 py-2 rounded-md text-sm font-medium"
   const mobileClasses = "px-3 py-2 rounded-md text-base font-medium"

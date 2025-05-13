@@ -80,14 +80,12 @@ export default function ParticleCanvas() {
         textImageData = ctx.createImageData(canvas.width, canvas.height)
       }
 
-      return osMatchScale
-    }
-
-    function createParticle(scale: number) {
+      return osMatchScale    }
+    
+    function createParticle(_scale: number) {
       if (!ctx || !canvas || !textImageData) return null
 
       const data = textImageData.data
-      const particleGap = 2
 
       for (let attempt = 0; attempt < 100; attempt++) {
         const x = Math.floor(Math.random() * canvas.width)

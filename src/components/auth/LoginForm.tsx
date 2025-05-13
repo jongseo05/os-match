@@ -117,14 +117,12 @@ export default function LoginForm() {
           GitHub
         </Button>
       </CardContent>
-      <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">
-        <p className="text-center text-sm text-gray-500">
-          Don't have an account?{" "}
+      <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">        <p className="text-center text-sm text-gray-500">
+          Don&apos;t have an account?{" "}
           <Link href="/signup" className="font-medium text-emerald-500 hover:text-emerald-400 transition-colors">
             Sign up
           </Link>
-        </p>
-        <p className="text-center text-xs text-gray-600">
+        </p>        <p className="text-center text-xs text-gray-600">
           By signing in, you agree to our{" "}
           <a href="#" className="text-emerald-500 hover:text-emerald-400 transition-colors">
             Terms of Service
