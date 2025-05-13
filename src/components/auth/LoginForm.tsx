@@ -116,8 +116,7 @@ export default function LoginForm() {
           <Github className="mr-2 h-4 w-4 text-emerald-500" />
           GitHub
         </Button>
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">        <p className="text-center text-sm text-gray-500">
+      </CardContent>      <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">        <p className="text-center text-sm text-gray-500">
           Don&apos;t have an account?{" "}
           <Link href="/signup" className="font-medium text-emerald-500 hover:text-emerald-400 transition-colors">
             Sign up

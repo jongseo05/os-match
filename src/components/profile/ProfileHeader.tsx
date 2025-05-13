@@ -58,15 +58,20 @@ export default function ProfileHeader({ userData, onUpdate }: ProfileHeaderProps
       <div className="h-32 bg-gradient-to-r from-emerald-600 to-emerald-400 relative">
         {/* Profile image */}
         <div className="absolute -bottom-12 left-8">
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-black bg-black">
-              <Image
-                src={previewImage || "/dev_profile.png"}
-                alt="Profile"
-                width={96}
-                height={96}
-                className="w-full h-full object-cover"
-              />
+          <div className="relative group">            <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-black bg-black">
+              {isUploading ? (
+                <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500"></div>
+                </div>
+              ) : (
+                <Image
+                  src={previewImage || "/dev_profile.png"}
+                  alt="Profile"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
 
             {!previewImage ? (

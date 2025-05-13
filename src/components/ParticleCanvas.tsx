@@ -78,11 +78,9 @@ export default function ParticleCanvas() {
         console.error("Error getting image data:", error)
         // Create a fallback image data if needed
         textImageData = ctx.createImageData(canvas.width, canvas.height)
-      }
-
-      return osMatchScale    }
+      }      return osMatchScale    }
     
-    function createParticle(_scale: number) {
+    function createParticle(scale: number) {
       if (!ctx || !canvas || !textImageData) return null
 
       const data = textImageData.data
@@ -120,13 +118,13 @@ export default function ParticleCanvas() {
 
     function createInitialParticles(scale: number) {
       if (!canvas || !ctx) return;
-      
-      const baseParticleCount = 5000 // Reduced for better performance
+        const baseParticleCount = 5000 // Reduced for better performance
       // canvas 크기를 확인하고 안전하게 계산
       const canvasArea = (canvas.width || 1) * (canvas.height || 1);
       const referenceArea = 1920 * 1080;
       const scaleFactor = Math.sqrt(canvasArea / referenceArea);
       const particleCount = Math.floor(baseParticleCount * scaleFactor);
+      const particleGap = Math.max(1, Math.floor(10 / scale));
       
       for (let i = 0; i < particleCount; i++) {
         const particle = createParticle(scale)

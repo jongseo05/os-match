@@ -259,20 +259,19 @@ export default function TechnicalSkillsSection({ userData, onUpdate }: Technical
       ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
       ctx.textAlign = x > centerX ? "left" : "right"
       ctx.textBaseline = y > centerY ? "top" : "bottom"
-      ctx.fillText(`${skill.proficiency}%`, percentX, percentY)
-    })
+      ctx.fillText(`${skill.proficiency}%`, percentX, percentY)    })
 
     // Add center point with glow
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI)
-    ctx.fillStyle = "rgba(56, 139, 253, 0.8)"
-    ctx.fill()
-
-    ctx.beginPath()
-    ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-    ctx.fill()
-  }, [skills, skillsByCategory])
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(56, 139, 253, 0.8)";
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fill();
+  }, [skills, skillsByCategory, getCategoryColor])
 
   return (
     <div className="space-y-6">

@@ -17,9 +17,10 @@ interface LoginModalProps {
   onSignUpClick: () => void // 회원가입 모달로 전환하기 위한 함수
 }
 
-export default function LoginModal({ isOpen, onClose, onSignUpClick }: LoginModalProps) {
-  const { signIn } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)  const [email, setEmail] = useState("")
+export default function LoginModal({ isOpen, onClose, onSignUpClick }: LoginModalProps) {  const { signIn } = useAuth()
+  const [isLoading, setIsLoading] = useState(false)
+  // const router = useRouter() - 사용하지 않음
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
 
@@ -144,9 +145,8 @@ export default function LoginModal({ isOpen, onClose, onSignUpClick }: LoginModa
               <Github className="mr-2 h-4 w-4 text-emerald-500" />
               GitHub
             </Button>
-          </CardContent>          <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">
-            <p className="text-center text-sm text-gray-500">
-              Don't have an account?{" "}
+          </CardContent>          <CardFooter className="flex flex-col space-y-1 border-t border-gray-800 pt-3 pb-4">            <p className="text-center text-sm text-gray-500">
+              Don&apos;t have an account?{" "}
               <button
                 onClick={handleSignupClick}
                 className="font-medium text-emerald-500 hover:text-emerald-400 transition-colors"

@@ -13,14 +13,13 @@ interface PrivacySectionProps {
 export default function PrivacySection({ userData, onUpdate }: PrivacySectionProps) {
   const [privacy, setPrivacy] = useState(userData.privacy)
   const [isEditing, setIsEditing] = useState(false)
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onUpdate({ privacy })
     setIsEditing(false)
   }
-
-  const updatePrivacy = (key: keyof typeof privacy, value: any) => {
+  
+  const updatePrivacy = (key: keyof typeof privacy, value: string | boolean) => {
     setPrivacy((prev) => ({ ...prev, [key]: value }))
   }
 
