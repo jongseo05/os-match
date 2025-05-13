@@ -61,7 +61,7 @@ export default function ProfileHeader({ userData, onUpdate }: ProfileHeaderProps
           <div className="relative group">
             <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-black bg-black">
               <Image
-                src={previewImage || userData.profileImage}
+                src={previewImage || "/dev_profile.png"}
                 alt="Profile"
                 width={96}
                 height={96}
@@ -178,11 +178,13 @@ export default function ProfileHeader({ userData, onUpdate }: ProfileHeaderProps
                 @{userData.githubUsername}
               </a>
             </div>
-          )}
-
-          <div className="flex items-center">
+          )}          <div className="flex items-center">
             <MapPin className="w-4 h-4 mr-1.5 text-gray-400" />
-            <span>{userData.region}</span>
+            {userData.city && userData.country ? (
+              <span>{userData.city}, {userData.country}</span>
+            ) : (
+              <span>{userData.region}</span>
+            )}
           </div>
 
           <div className="flex items-center">

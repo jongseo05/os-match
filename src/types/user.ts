@@ -15,6 +15,12 @@ export interface UserData {
   githubUsername: string
   region: string
   timezone: string
+  // 위치 정보 추가
+  latitude?: number
+  longitude?: number
+  // 국가 및 도시 정보 추가
+  country?: string
+  city?: string
   privacy: {
     profileVisibility: string
     showRealName: boolean
@@ -22,4 +28,6 @@ export interface UserData {
   }
   // TechnicalSkillsSection.tsx에서 필요한 skills 속성 추가
   skills: Skill[]
+  // 계정 생성 날짜 정보 추가
+  accountCreatedAt?: string
 }

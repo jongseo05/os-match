@@ -1,15 +1,32 @@
 'use client'
 
 import { useState } from "react"
-import { User, Menu, X, Home, Layers, GitPullRequest, History } from "lucide-react"
+import { Menu, X, Home, Layers, GitPullRequest, History, User, UserCircle, LogOut } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import OSMatchLogo from "./OSMatchLogo"
 import NavLink from "./NavLink"
-import LoginModal from "../components/auth/LoginModal"
-import SignUpModal from "../components/auth/SignUpModal"
+import LoginModal from "./auth/LoginModal"
+import SignUpModal from "./auth/SignUpModal"
+import ProfileDropdown from "./ProfileDropdown"
+import { useAuth } from "../lib/auth"
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [signUpModalOpen, setSignUpModalOpen] = useState(false)
+  const { user, isAuthenticated, signOut } = useAuth()
+  const router = useRouter()
+
+  // 로그아웃 핸들러
+  const handleLogout = async () => {
+    try {
+      await signOut()
+      router.push('/') // 홈페이지로 이동
+    } catch (error) {
+      console.error('로그아웃 실패:', error)
+    }
+  }
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen)
@@ -47,7 +64,9 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <span className="text-emerald-500 font-bold text-xl">OS-Match</span>
+                <Link href="/" className="flex-shrink-0">
+                  <OSMatchLogo className="h-8 w-auto" />
+                </Link>
               </div>
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
@@ -56,20 +75,14 @@ export default function Navbar() {
                   ))}
                 </div>
               </div>
-            </div>
-            <div className="hidden md:block">
+            </div>            <div className="hidden md:block">
               <div className="ml-4 flex items-center md:ml-6">
-                <button
-                  type="button"
-                  onClick={openLoginModal}
-                  className="group p-2 rounded-full text-gray-400 transition-all duration-300 ease-in-out focus:outline-none"
-                >
-                  <span className="sr-only">Sign in</span>
-                  <User
-                    className="h-6 w-6 group-hover:text-emerald-400 transition-transform duration-300 group-hover:scale-110"
-                    aria-hidden="true"
-                  />
-                </button>
+                <ProfileDropdown 
+                  isLoggedIn={isAuthenticated}
+                  userEmail={user?.email}
+                  onLoginClick={openLoginModal} 
+                  onLogout={handleLogout} 
+                />
               </div>
             </div>
             <div className="-mr-2 flex md:hidden">
@@ -100,15 +113,38 @@ export default function Navbar() {
             {navItems.map((item) => (
               <NavLink key={item.label} href={item.href} icon={item.icon} label={item.label} mobile />
             ))}
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false)
-                openLoginModal()
-              }}
-              className="w-full text-left"
-            >
-              <NavLink href="#" icon={User} label="Sign in" mobile />
-            </button>
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    router.push('/profile')
+                  }}
+                  className="w-full text-left"
+                >
+                  <NavLink href="#" icon={UserCircle} label="View Profile" mobile />
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    handleLogout()
+                  }}
+                  className="w-full text-left"
+                >
+                  <NavLink href="#" icon={LogOut} label="Logout" mobile />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  openLoginModal()
+                }}
+                className="w-full text-left"
+              >
+                <NavLink href="#" icon={User} label="Sign in" mobile />
+              </button>
+            )}
           </div>
         </div>
       </nav>
