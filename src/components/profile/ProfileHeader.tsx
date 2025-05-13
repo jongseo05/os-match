@@ -178,11 +178,13 @@ export default function ProfileHeader({ userData, onUpdate }: ProfileHeaderProps
                 @{userData.githubUsername}
               </a>
             </div>
-          )}
-
-          <div className="flex items-center">
+          )}          <div className="flex items-center">
             <MapPin className="w-4 h-4 mr-1.5 text-gray-400" />
-            <span>{userData.region}</span>
+            {userData.city && userData.country ? (
+              <span>{userData.city}, {userData.country}</span>
+            ) : (
+              <span>{userData.region}</span>
+            )}
           </div>
 
           <div className="flex items-center">

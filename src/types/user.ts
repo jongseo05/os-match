@@ -15,6 +15,12 @@ export interface UserData {
   githubUsername: string
   region: string
   timezone: string
+  // 위치 정보 추가
+  latitude?: number
+  longitude?: number
+  // 국가 및 도시 정보 추가
+  country?: string
+  city?: string
   privacy: {
     profileVisibility: string
     showRealName: boolean

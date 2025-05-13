@@ -141,6 +141,10 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
           showEmail: data.show_email || false,
         },
         skills,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        country: data.country,
+        city: data.city,
         accountCreatedAt: accountCreatedAt || data.created_at || new Date().toISOString()
       };
 
@@ -160,8 +164,7 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
  * @param userData 업데이트할 사용자 데이터
  */
 export async function updateUserProfile(userId: string, userData: Partial<UserData>): Promise<boolean> {
-  try {
-    // 프로필 테이블에 저장할 데이터 준비
+  try {    // 프로필 테이블에 저장할 데이터 준비
     const profileData = {
       nickname: userData.nickname,
       real_name: userData.realName,
@@ -173,7 +176,11 @@ export async function updateUserProfile(userId: string, userData: Partial<UserDa
       profile_visibility: userData.privacy?.profileVisibility,
       show_real_name: userData.privacy?.showRealName,
       show_email: userData.privacy?.showEmail,
-    };    // 프로필 정보 업데이트 - id 필드 사용
+      latitude: userData.latitude,
+      longitude: userData.longitude,
+      country: userData.country,
+      city: userData.city,
+    };// 프로필 정보 업데이트 - id 필드 사용
     const { error } = await supabase
       .from('user_profiles')
       .update(profileData)
