@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation"
 
 interface ProfileDropdownProps {
   isLoggedIn: boolean
+  userEmail?: string | null  // userEmail 추가
   onLoginClick: () => void
   onLogout: () => void
 }
 
-export default function ProfileDropdown({ isLoggedIn, onLoginClick, onLogout }: ProfileDropdownProps) {
+export default function ProfileDropdown({ isLoggedIn, userEmail, onLoginClick, onLogout }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -81,12 +82,11 @@ export default function ProfileDropdown({ isLoggedIn, onLoginClick, onLogout }: 
         />
       </button>
 
-      {/* Dropdown menu */}
-      {isOpen && isLoggedIn && (
+      {/* Dropdown menu */}      {isOpen && isLoggedIn && (
         <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-black/90 backdrop-blur-sm border border-gray-800 ring-1 ring-black ring-opacity-5 z-50 animate-in fade-in zoom-in duration-200">
           <div className="px-4 py-3 border-b border-gray-800">
             <p className="text-sm text-white">Signed in as</p>
-            <p className="text-sm font-medium text-emerald-400 truncate">alex@example.com</p>
+            <p className="text-sm font-medium text-emerald-400 truncate">{userEmail}</p>
           </div>
           <button
             onClick={handleViewProfile}
