@@ -271,7 +271,7 @@ export default function TechnicalSkillsSection({ userData, onUpdate }: Technical
     ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI);
     ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
     ctx.fill();
-  }, [skills, skillsByCategory, getCategoryColor])
+  }, [skills, skillsByCategory, getCategoryColor]) // getCategoryColor 종속성 추가
 
   return (
     <div className="space-y-6">
