@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { User, Mail, MapPin, Shield } from "lucide-react"
+import { User, Mail, MapPin, Shield, Code } from "lucide-react"
 import BasicInfoSection from "./sections/BasicInfoSection"
 import ContactInfoSection from "./sections/ContactInfoSection"
 import LocationSection from "./sections/LocationSection"
 import PrivacySection from "./sections/PrivacySection"
+import TechnicalSkillsSection from "./sections/TechnicalSkillsSection"
 import type { UserData } from "../../types/user"
 
 interface ProfileContentProps {
@@ -15,12 +16,12 @@ interface ProfileContentProps {
 
 export default function ProfileContent({ userData, onUpdate }: ProfileContentProps) {
   const [activeTab, setActiveTab] = useState("basic")
-
   const tabs = [
     { id: "basic", label: "Basic Information", icon: User },
     { id: "contact", label: "Contact", icon: Mail },
     { id: "location", label: "Location", icon: MapPin },
     { id: "privacy", label: "Privacy", icon: Shield },
+    { id: "skills", label: "Technical Skills", icon: Code },
   ]
 
   return (
@@ -42,13 +43,12 @@ export default function ProfileContent({ userData, onUpdate }: ProfileContentPro
             </button>
           ))}
         </nav>
-      </div>
-
-      <div className="p-6">
+      </div>      <div className="p-6">
         {activeTab === "basic" && <BasicInfoSection userData={userData} onUpdate={onUpdate} />}
         {activeTab === "contact" && <ContactInfoSection userData={userData} onUpdate={onUpdate} />}
         {activeTab === "location" && <LocationSection userData={userData} onUpdate={onUpdate} />}
         {activeTab === "privacy" && <PrivacySection userData={userData} onUpdate={onUpdate} />}
+        {activeTab === "skills" && <TechnicalSkillsSection userData={userData} onUpdate={onUpdate} />}
       </div>
     </div>
   )

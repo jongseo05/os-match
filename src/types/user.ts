@@ -3,6 +3,8 @@ export interface Skill {
   level: string
   category: string
   proficiency: number
+  githubVerified?: boolean
+  manuallyAdded?: boolean
 }
 
 export interface UserData {
@@ -30,4 +32,6 @@ export interface UserData {
   skills: Skill[]
   // 계정 생성 날짜 정보 추가
   accountCreatedAt?: string
+  // GitHub 분석 날짜 추가
+  githubLastAnalyzed?: string
 }

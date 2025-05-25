@@ -1,10 +1,18 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
-import type { UserData, Skill } from "../../../types/user"
-import { Plus, X } from "lucide-react"
+import { Plus, RefreshCw, Github, AlertCircle, Code, X, ExternalLink, Search } from "lucide-react"
+import type { UserData, Skill } from "@/types/user"
+import EnhancedDonutChart from "../../charts/EnhancedDonutChart"
+import SkillBadge from "@/components/ui/skill-badge"
+import AnimatedProgress from "@/components/ui/animated-progress"
+import {
+  fetchGithubRepositories,
+  analyzeGithubRepositories,
+  generateSkillTags,
+  type GithubRepository,
+  type GithubUserStats,
+} from "../../../app/services/github-service"
 
 interface TechnicalSkillsSectionProps {
   userData: UserData
@@ -12,473 +20,921 @@ interface TechnicalSkillsSectionProps {
 }
 
 export default function TechnicalSkillsSection({ userData, onUpdate }: TechnicalSkillsSectionProps) {
-  const [skills, setSkills] = useState<Skill[]>(userData.skills)
+  // Skills state
+  const [skills, setSkills] = useState<Skill[]>(userData.skills || [])
+  const [filteredSkills, setFilteredSkills] = useState<Skill[]>(skills)
+  const [skillSearch, setSkillSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [isAddingSkill, setIsAddingSkill] = useState(false)
   const [newSkill, setNewSkill] = useState("")
   const [newSkillLevel, setNewSkillLevel] = useState("Intermediate")
   const [newSkillCategory, setNewSkillCategory] = useState("language")
   const [newSkillProficiency, setNewSkillProficiency] = useState(50)
-  const [isEditing, setIsEditing] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const radarChartRef = useRef<HTMLCanvasElement>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onUpdate({ skills })
-    setIsEditing(false)
+  // GitHub integration states
+  const [isGithubConnected, setIsGithubConnected] = useState(userData.githubConnected || false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [githubRepos, setGithubRepos] = useState<GithubRepository[]>([])
+  const [githubStats, setGithubStats] = useState<GithubUserStats | null>(null)
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null)
+  const [hoveredLanguage, setHoveredLanguage] = useState<string | null>(null)
+
+  // UI states
+  const [activeTab, setActiveTab] = useState<"overview" | "github" | "manage">("overview")
+  const [showGithubConnectPrompt, setShowGithubConnectPrompt] = useState(!isGithubConnected)
+  const skillInputRef = useRef<HTMLInputElement>(null)
+
+  // Filter skills when search or category changes
+  useEffect(() => {
+    let result = [...skills]
+
+    if (skillSearch) {
+      const searchLower = skillSearch.toLowerCase()
+      result = result.filter((skill) => skill.name.toLowerCase().includes(searchLower))
+    }
+
+    if (selectedCategory) {
+      result = result.filter((skill) => skill.category === selectedCategory)
+    }
+
+    setFilteredSkills(result)
+  }, [skills, skillSearch, selectedCategory])
+
+  // Fetch GitHub data on initial load if connected
+  useEffect(() => {
+    if (isGithubConnected && userData.githubUsername) {
+      fetchGithubData(userData.githubUsername)
+    }
+  }, [isGithubConnected, userData.githubUsername])
+
+  // Focus input when adding skill
+  useEffect(() => {
+    if (isAddingSkill && skillInputRef.current) {
+      skillInputRef.current.focus()
+    }
+  }, [isAddingSkill])
+
+  // Function to fetch and analyze GitHub data
+  const fetchGithubData = async (username: string) => {
+    setIsAnalyzing(true)
+    setAnalyzeError(null)
+
+    try {
+      const repos = await fetchGithubRepositories(username)
+      setGithubRepos(repos)
+
+      const stats = analyzeGithubRepositories(repos)
+      setGithubStats(stats)
+
+      // Generate skill tags from GitHub data
+      const generatedSkills = generateSkillTags(repos)
+
+      // Merge with existing skills, avoiding duplicates
+      const existingSkillNames = skills.map((skill) => skill.name.toLowerCase())
+      const newSkills = generatedSkills.filter((skill) => !existingSkillNames.includes(skill.name.toLowerCase()))
+
+      // Update existing skills with GitHub data if they exist
+      const updatedExistingSkills = skills.map((skill) => {
+        const githubSkill = generatedSkills.find((gs) => gs.name.toLowerCase() === skill.name.toLowerCase())
+
+        if (githubSkill) {
+          return {
+            ...skill,
+            proficiency: Math.max(skill.proficiency || 0, githubSkill.proficiency),
+            githubVerified: true,
+          }
+        }
+
+        return skill
+      })
+
+      // Combine updated existing skills with new skills
+      const mergedSkills = [...updatedExistingSkills, ...newSkills]
+      setSkills(mergedSkills)
+
+      // Update user data
+      onUpdate({
+        skills: mergedSkills,
+        githubLastAnalyzed: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error("Error fetching GitHub data:", error)
+      setAnalyzeError("Failed to analyze GitHub repositories. Please try again later.")
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
-  const addSkill = () => {
+  const handleAddSkill = () => {
     if (newSkill.trim() && !skills.some((s) => s.name.toLowerCase() === newSkill.toLowerCase())) {
-      setSkills([
+      const updatedSkills = [
         ...skills,
         {
           name: newSkill.trim(),
           level: newSkillLevel,
           category: newSkillCategory,
           proficiency: newSkillProficiency,
+          manuallyAdded: true,
         },
-      ])
+      ]
+
+      setSkills(updatedSkills)
+      onUpdate({ skills: updatedSkills })
+
+      // Reset form
       setNewSkill("")
       setNewSkillProficiency(50)
+      setIsAddingSkill(false)
     }
   }
 
-  const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill.name !== skillToRemove))
+  const handleRemoveSkill = (skillName: string) => {
+    const updatedSkills = skills.filter((skill) => skill.name !== skillName)
+    setSkills(updatedSkills)
+    onUpdate({ skills: updatedSkills })
+  }
+
+  const handleReanalyzeGithub = () => {
+    if (userData.githubUsername) {
+      fetchGithubData(userData.githubUsername)
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
   }
 
   const skillLevels = ["Beginner", "Intermediate", "Expert"]
   const skillCategories = [
-    { value: "language", label: "Programming Language", color: "#58a6ff" },
-    { value: "framework", label: "Framework", color: "#8957e5" },
-    { value: "tool", label: "Tool", color: "#f0883e" },
-    { value: "database", label: "Database", color: "#f85149" },
-    { value: "cloud", label: "Cloud Service", color: "#3fb950" },
+    { value: "language", label: "Programming Language", color: "blue" },
+    { value: "framework", label: "Framework", color: "purple" },
+    { value: "tool", label: "Tool", color: "orange" },
+    { value: "database", label: "Database", color: "red" },
+    { value: "cloud", label: "Cloud Service", color: "green" },
   ]
 
-  const getCategoryColor = (category: string): string => {
-    const found = skillCategories.find((c) => c.value === category)
-    return found ? found.color : "#58a6ff"
+  // Get top skills for each category
+  const getTopSkillsByCategory = (category: string, limit = 3): Skill[] => {
+    return skills
+      .filter((skill) => skill.category === category)
+      .sort((a, b) => (b.proficiency || 0) - (a.proficiency || 0))
+      .slice(0, limit)
   }
 
-  // Group skills by category
-  const skillsByCategory = skills.reduce(
-    (acc, skill) => {
-      if (!acc[skill.category]) {
-        acc[skill.category] = []
-      }
-      acc[skill.category].push(skill)
-      return acc
-    },
-    {} as Record<string, typeof skills>,
-  )
-
-  // Draw radar chart
-  useEffect(() => {
-    const canvas = radarChartRef.current
-    if (!canvas) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    // Set canvas size with higher resolution for sharper rendering
-    const dpr = window.devicePixelRatio || 1
-    canvas.width = canvas.offsetWidth * dpr
-    canvas.height = canvas.offsetHeight * dpr
-    ctx.scale(dpr, dpr)
-
-    const width = canvas.offsetWidth
-    const height = canvas.offsetHeight
-
-    const centerX = width / 2
-    const centerY = height / 2
-    const radius = Math.min(centerX, centerY) * 0.75
-
-    // Draw background
-    ctx.fillStyle = "#0d1117"
-    ctx.fillRect(0, 0, width, height)
-
-    // Draw radar grid with subtle gradient
-    const levels = 5
-    const levelOpacityStep = 0.7 / levels
-
-    for (let i = 1; i <= levels; i++) {
-      const ratio = i / levels
-      ctx.beginPath()
-      ctx.arc(centerX, centerY, radius * ratio, 0, 2 * Math.PI)
-
-      // Create gradient for grid levels
-      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * ratio)
-      gradient.addColorStop(0, `rgba(31, 111, 235, ${0.05 + levelOpacityStep * i})`)
-      gradient.addColorStop(1, `rgba(31, 111, 235, ${0.02 + (levelOpacityStep * i) / 2})`)
-
-      ctx.fillStyle = gradient
-      ctx.fill()
-
-      ctx.strokeStyle = `rgba(48, 54, 61, ${0.3 + ratio * 0.4})`
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-
-    // Get top skills from each category (max 3 per category)
-    const topSkills: Skill[] = []
-    Object.values(skillsByCategory).forEach((categorySkills) => {
-      // Sort by proficiency (highest first)
-      const sorted = [...categorySkills].sort((a, b) => b.proficiency - a.proficiency)
-      // Take top 3
-      topSkills.push(...sorted.slice(0, 3))
-    })
-
-    if (topSkills.length === 0) return
-
-    // Calculate angles for each skill
-    const angleStep = (2 * Math.PI) / topSkills.length
-
-    // Draw axes with subtle glow
-    topSkills.forEach((skill, i) => {
-      const angle = i * angleStep - Math.PI / 2 // Start from top (subtract PI/2)
-
-      // Draw axis line with gradient
-      const gradient = ctx.createLinearGradient(
-        centerX,
-        centerY,
-        centerX + radius * Math.cos(angle),
-        centerY + radius * Math.sin(angle),
-      )
-      gradient.addColorStop(0, "rgba(48, 54, 61, 0.2)")
-      gradient.addColorStop(1, "rgba(48, 54, 61, 0.8)")
-
-      ctx.beginPath()
-      ctx.moveTo(centerX, centerY)
-      ctx.lineTo(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle))
-      ctx.strokeStyle = gradient
-      ctx.lineWidth = 1
-      ctx.stroke()
-
-      // Draw skill label with better positioning
-      const labelRadius = radius + 15
-      const labelX = centerX + labelRadius * Math.cos(angle)
-      const labelY = centerY + labelRadius * Math.sin(angle)
-
-      ctx.save()
-      ctx.translate(labelX, labelY)
-
-      // Rotate text based on position for better readability
-      if (angle > Math.PI / 2 && angle < (Math.PI * 3) / 2) {
-        ctx.rotate(angle + Math.PI)
-        ctx.textAlign = "right"
-      } else {
-        ctx.rotate(angle)
-        ctx.textAlign = "left"
-      }
-
-      // Add text shadow for better visibility
-      ctx.shadowColor = "rgba(0, 0, 0, 0.8)"
-      ctx.shadowBlur = 3
-      ctx.fillStyle = getCategoryColor(skill.category)
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
-      ctx.textBaseline = "middle"
-      ctx.fillText(skill.name, 0, 0)
-      ctx.restore()
-    })
-
-    // Draw data polygon with gradient fill
-    ctx.beginPath()
-    topSkills.forEach((skill, i) => {
-      const angle = i * angleStep - Math.PI / 2 // Start from top
-      const pointRadius = radius * (skill.proficiency / 100)
-      const x = centerX + pointRadius * Math.cos(angle)
-      const y = centerY + pointRadius * Math.sin(angle)
-
-      if (i === 0) {
-        ctx.moveTo(x, y)
-      } else {
-        ctx.lineTo(x, y)
-      }
-    })
-
-    // Close the path
-    const firstSkill = topSkills[0]
-    const firstAngle = -Math.PI / 2 // Start from top
-    const firstPointRadius = radius * (firstSkill.proficiency / 100)
-    ctx.lineTo(centerX + firstPointRadius * Math.cos(firstAngle), centerY + firstPointRadius * Math.sin(firstAngle))
-
-    // Create gradient fill for the radar area
-    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius)
-    gradient.addColorStop(0, "rgba(56, 139, 253, 0.7)")
-    gradient.addColorStop(0.7, "rgba(56, 139, 253, 0.2)")
-    gradient.addColorStop(1, "rgba(56, 139, 253, 0.05)")
-
-    // Fill with gradient
-    ctx.fillStyle = gradient
-    ctx.fill()
-
-    // Draw glowing outline
-    ctx.strokeStyle = "rgba(56, 139, 253, 0.8)"
-    ctx.lineWidth = 2
-    ctx.stroke()
-
-    // Add outer glow effect
-    ctx.shadowColor = "rgba(56, 139, 253, 0.5)"
-    ctx.shadowBlur = 10
-    ctx.strokeStyle = "rgba(56, 139, 253, 0.3)"
-    ctx.lineWidth = 1
-    ctx.stroke()
-    ctx.shadowBlur = 0
-
-    // Draw data points with glowing effect
-    topSkills.forEach((skill, i) => {
-      const angle = i * angleStep - Math.PI / 2 // Start from top
-      const pointRadius = radius * (skill.proficiency / 100)
-      const x = centerX + pointRadius * Math.cos(angle)
-      const y = centerY + pointRadius * Math.sin(angle)
-
-      // Draw glow
-      ctx.beginPath()
-      ctx.arc(x, y, 6, 0, 2 * Math.PI)
-      ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
-      ctx.fill()
-
-      // Draw point
-      ctx.beginPath()
-      ctx.arc(x, y, 4, 0, 2 * Math.PI)
-      ctx.fillStyle = getCategoryColor(skill.category)
-      ctx.fill()
-
-      // Add highlight
-      ctx.beginPath()
-      ctx.arc(x, y, 2, 0, 2 * Math.PI)
-      ctx.fillStyle = "rgba(255, 255, 255, 0.7)"
-      ctx.fill()
-
-      // Add skill percentage near the point
-      const percentX = x + (x > centerX ? 10 : -10)
-      const percentY = y + (y > centerY ? 10 : -10)
-
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)"
-      ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
-      ctx.textAlign = x > centerX ? "left" : "right"
-      ctx.textBaseline = y > centerY ? "top" : "bottom"
-      ctx.fillText(`${skill.proficiency}%`, percentX, percentY)    })
-
-    // Add center point with glow
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(56, 139, 253, 0.8)";
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-    ctx.fill();
-  }, [skills, skillsByCategory, getCategoryColor]) // getCategoryColor 종속성 추가
+  // Get color for category
+  const getCategoryColor = (category: string): string => {
+    const found = skillCategories.find((c) => c.value === category)
+    return found ? found.color : "blue"
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[#e6edf3] mb-2">Technical Skills</h2>
-        <p className="text-[#8b949e]">
-          Add your technical skills to help us match you with suitable projects and collaborators.
+        <h2 className="text-xl font-semibold text-white mb-2">Technical Skills</h2>
+        <p className="text-gray-400">
+          Showcase your technical expertise to help us match you with suitable projects and collaborators.
         </p>
       </div>
 
-      {/* Skill Visualization */}
-      <div className="bg-[#0d1117] border border-[#30363d] rounded-md p-4">
-        <h3 className="text-lg font-medium text-[#e6edf3] mb-4">Skill Radar</h3>
-        <div className="flex flex-col md:flex-row gap-6">
-          <div className="md:w-1/2">
-            <canvas ref={radarChartRef} className="w-full h-64"></canvas>
+      {/* Tabs Navigation */}
+      <div className="border-b border-gray-800">
+        <nav className="flex space-x-1">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`py-2 px-4 text-sm font-medium border-b-2 ${
+              activeTab === "overview"
+                ? "border-emerald-500 text-emerald-400"
+                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-700"
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab("github")}
+            className={`py-2 px-4 text-sm font-medium border-b-2 flex items-center ${
+              activeTab === "github"
+                ? "border-emerald-500 text-emerald-400"
+                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-700"
+            }`}
+          >
+            <Github className="w-3.5 h-3.5 mr-1.5" />
+            GitHub Analysis
+          </button>
+          <button
+            onClick={() => setActiveTab("manage")}
+            className={`py-2 px-4 text-sm font-medium border-b-2 flex items-center ${
+              activeTab === "manage"
+                ? "border-emerald-500 text-emerald-400"
+                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-700"
+            }`}
+          >
+            <Code className="w-3.5 h-3.5 mr-1.5" />
+            Manage Skills
+          </button>
+        </nav>
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {/* Skills Overview */}
+          <div className="bg-black/40 backdrop-blur-sm border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-white">Skills Overview</h3>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveTab("manage")}
+                  className="px-3 py-1.5 bg-gray-900/60 border border-gray-700 rounded-md text-xs font-medium text-gray-300 hover:bg-gray-800 hover:text-emerald-400 transition-all duration-300 flex items-center"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Add Skills
+                </button>
+              </div>
+            </div>
+
+            <div className="p-5">
+              {skills.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Top Skills */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400 mb-3">Your Top Skills</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {skills
+                        .sort((a, b) => (b.proficiency || 0) - (a.proficiency || 0))
+                        .slice(0, 8)
+                        .map((skill) => (
+                          <SkillBadge key={skill.name} skill={skill} size="md" showLevel={true} />
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Skills by Category */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {skillCategories.map((category) => {
+                      const categorySkills = getTopSkillsByCategory(category.value)
+                      if (categorySkills.length === 0) return null
+
+                      return (
+                        <div key={category.value} className="bg-gray-900/30 rounded-lg p-4 border border-gray-800">
+                          <h4 className="text-sm font-medium text-gray-300 mb-3">{category.label}s</h4>
+                          <div className="space-y-3">
+                            {categorySkills.map((skill) => (                              <div key={skill.name} className="space-y-1">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-white">{skill.name}</span>
+                                  <span className="text-xs text-gray-400">{skill.level}</span>
+                                </div>
+                                <AnimatedProgress
+                                  value={skill.proficiency || 50}
+                                  color={getCategoryColor(category.value)}
+                                  height={6}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-10">
+                  <Code className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-white mb-2">No skills added yet</h3>
+                  <p className="text-gray-400 max-w-md mx-auto mb-4">
+                    Add your technical skills manually or connect your GitHub account to automatically analyze your
+                    repositories.
+                  </p>
+                  <div className="flex flex-col sm:flex-row justify-center gap-3">
+                    <button
+                      onClick={() => setActiveTab("manage")}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white transition-colors duration-300 rounded-md text-sm font-medium"
+                    >
+                      Add Skills Manually
+                    </button>
+                    {!isGithubConnected && (
+                      <button
+                        onClick={() => {
+                          setIsGithubConnected(true)
+                          setActiveTab("github")
+                        }}
+                        className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white transition-colors duration-300 rounded-md text-sm font-medium flex items-center justify-center"
+                      >
+                        <Github className="w-4 h-4 mr-2" />
+                        Connect GitHub
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="md:w-1/2">
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-[#c9d1d9]">Categories</h4>
+
+          {/* GitHub Stats Summary (if connected) */}
+          {isGithubConnected && githubStats && (
+            <div className="bg-black/40 backdrop-blur-sm border border-gray-800 rounded-lg overflow-hidden">
+              <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+                <div className="flex items-center">
+                  <Github className="w-4 h-4 mr-2 text-gray-400" />
+                  <h3 className="text-lg font-medium text-white">GitHub Activity</h3>
+                </div>
+                <button
+                  onClick={() => setActiveTab("github")}
+                  className="text-xs text-gray-400 hover:text-emerald-400 transition-colors"
+                >
+                  View Details
+                </button>
+              </div>
+
+              <div className="p-5">
+                <div className="grid grid-cols-3 gap-4 mb-5">
+                  <div className="bg-gray-900/30 p-3 rounded-lg border border-gray-800">
+                    <p className="text-xs text-gray-400 mb-1">Repositories</p>
+                    <p className="text-2xl font-bold text-white">{githubStats.totalRepos}</p>
+                  </div>
+                  <div className="bg-gray-900/30 p-3 rounded-lg border border-gray-800">
+                    <p className="text-xs text-gray-400 mb-1">Avg. Stars</p>
+                    <p className="text-2xl font-bold text-white">{githubStats.averageStars.toFixed(1)}</p>
+                  </div>
+                  <div className="bg-gray-900/30 p-3 rounded-lg border border-gray-800">
+                    <p className="text-xs text-gray-400 mb-1">Last Activity</p>
+                    <p className="text-sm font-medium text-white">{formatDate(githubStats.lastActivityDate)}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="md:w-1/2">
+                    <h4 className="text-sm font-medium text-gray-400 mb-3">Top Languages</h4>
+                    <div className="space-y-3">
+                      {githubStats.languages.slice(0, 4).map((lang) => (
+                        <div
+                          key={lang.language}
+                          className={`flex items-center ${hoveredLanguage === lang.language ? "bg-gray-800/30 rounded" : ""}`}
+                        >
+                          <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: lang.color }}></span>
+                          <span className="text-sm text-white flex-1">{lang.language}</span>
+                          <span className="text-xs text-gray-400 mr-2">{lang.count} repos</span>
+                          <AnimatedProgress
+                            value={lang.percentage}
+                            max={100}
+                            height={6}
+                            width={100}
+                            showValue={false}
+                          />
+                          <span className="text-xs text-gray-400 ml-2 w-12 text-right">
+                            {lang.percentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="md:w-1/2 flex justify-center">
+                    <EnhancedDonutChart
+                      data={githubStats.languages}
+                      width={200}
+                      height={200}
+                      innerRadius={50}
+                      outerRadius={80}
+                      onSegmentHover={setHoveredLanguage}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GitHub Analysis Tab */}
+      {activeTab === "github" && (
+        <div className="bg-black/40 backdrop-blur-sm border border-gray-800 rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+            <div className="flex items-center">
+              <Github className="w-4 h-4 mr-2 text-gray-400" />
+              <h3 className="text-lg font-medium text-white">GitHub Skills Analysis</h3>
+            </div>
+            {isGithubConnected && userData.githubLastAnalyzed && (
+              <div className="text-xs text-gray-500">Last analyzed: {formatDate(userData.githubLastAnalyzed)}</div>
+            )}
+          </div>
+
+          <div className="p-5">
+            {isGithubConnected ? (
+              <>
+                {analyzeError && (
+                  <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded-md flex items-start">
+                    <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-400 text-sm">{analyzeError}</p>
+                  </div>
+                )}
+
+                {isAnalyzing ? (
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <RefreshCw className="w-10 h-10 text-emerald-500 animate-spin mb-4" />
+                    <h3 className="text-lg font-medium text-white mb-2">Analyzing GitHub Repositories</h3>
+                    <p className="text-gray-400 max-w-md text-center">
+                      We're analyzing your public repositories to extract skills and language usage patterns. This may
+                      take a moment.
+                    </p>
+                  </div>
+                ) : githubStats ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium text-gray-300">Repositories</h4>
+                          <span className="text-2xl font-bold text-white">{githubStats.totalRepos}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">Total number of public repositories analyzed</p>
+                      </div>
+
+                      <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium text-gray-300">Average Stars</h4>
+                          <span className="text-2xl font-bold text-white">{githubStats.averageStars.toFixed(1)}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">Average star count across all repositories</p>
+                      </div>
+
+                      <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-sm font-medium text-gray-300">Last Activity</h4>
+                          <span className="text-sm font-medium text-white">
+                            {formatDate(githubStats.lastActivityDate)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">Date of most recent repository update</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col lg:flex-row gap-6">
+                      {/* Language Distribution */}
+                      <div className="lg:w-1/2">
+                        <h4 className="text-sm font-medium text-gray-300 mb-4">Language Distribution</h4>
+                        <div className="flex justify-center mb-6">
+                          <EnhancedDonutChart
+                            data={githubStats.languages}
+                            width={250}
+                            height={250}
+                            innerRadius={60}
+                            outerRadius={100}
+                            onSegmentHover={setHoveredLanguage}
+                          />
+                        </div>
+
+                        <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                          {githubStats.languages.map((lang) => (
+                            <div
+                              key={lang.language}
+                              className={`flex items-center ${hoveredLanguage === lang.language ? "bg-gray-800/30 rounded p-1" : "p-1"}`}
+                            >
+                              <span
+                                className="w-3 h-3 rounded-full mr-2"
+                                style={{ backgroundColor: lang.color }}
+                              ></span>
+                              <span className="text-sm text-white flex-1">{lang.language}</span>
+                              <span className="text-xs text-gray-400 mr-2">{lang.count} repos</span>
+                              <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{
+                                    width: `${lang.percentage}%`,
+                                    backgroundColor: lang.color,
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-gray-400 ml-2 w-12 text-right">
+                                {lang.percentage.toFixed(1)}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Recent Repositories */}
+                      <div className="lg:w-1/2">
+                        <h4 className="text-sm font-medium text-gray-300 mb-4">Recent Repositories</h4>
+                        <div className="bg-gray-900/30 rounded-lg border border-gray-800 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-800">
+                              <thead className="bg-gray-900/50">
+                                <tr>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                                  >
+                                    Repository
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                                  >
+                                    Language
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                                  >
+                                    Stars
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider"
+                                  >
+                                    Updated
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-800">
+                                {githubRepos.slice(0, 5).map((repo) => (
+                                  <tr key={repo.name} className="hover:bg-gray-800/30">
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm">
+                                      <a
+                                        href={repo.html_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-emerald-400 hover:underline flex items-center"
+                                      >
+                                        {repo.name}
+                                        <ExternalLink className="w-3 h-3 ml-1 inline-block" />
+                                      </a>
+                                      {repo.description && (
+                                        <p className="text-xs text-gray-500 truncate max-w-xs">{repo.description}</p>
+                                      )}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm">
+                                      <span className="flex items-center">
+                                        <span
+                                          className="w-2 h-2 rounded-full mr-1.5"
+                                          style={{
+                                            backgroundColor:
+                                              githubStats?.languages.find((l) => l.language === repo.language)?.color ||
+                                              "#ededed",
+                                          }}
+                                        ></span>
+                                        <span className="text-gray-300">{repo.language || "N/A"}</span>
+                                      </span>
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                      {repo.stargazers_count}
+                                    </td>
+                                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                      {formatDate(repo.updated_at)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {githubRepos.length > 5 && (
+                            <div className="p-2 text-center border-t border-gray-800">
+                              <a
+                                href={`https://github.com/${userData.githubUsername}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-emerald-400 hover:underline"
+                              >
+                                View all repositories on GitHub
+                              </a>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-4">
+                          <button
+                            onClick={handleReanalyzeGithub}
+                            disabled={isAnalyzing}
+                            className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                          >
+                            <RefreshCw className={`w-4 h-4 mr-2 ${isAnalyzing ? "animate-spin" : ""}`} />
+                            Re-analyze from GitHub
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Extracted Skills */}
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-300 mb-3">Extracted Skills</h4>
+                      <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                        <p className="text-sm text-gray-400 mb-3">
+                          These skills were automatically extracted from your GitHub repositories:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {skills
+                            .filter((skill) => skill.githubVerified)
+                            .map((skill) => (
+                              <SkillBadge key={skill.name} skill={skill} />
+                            ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <button
+                      onClick={handleReanalyzeGithub}
+                      className="flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-500 transition-colors duration-300 mb-4"
+                    >
+                      <Github className="w-4 h-4 mr-2" />
+                      Analyze GitHub Repositories
+                    </button>
+                    <p className="text-gray-400 text-center max-w-md">
+                      Analyze your public repositories to extract skills and language usage patterns. This helps us
+                      better understand your technical expertise.
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-10">
+                <Github className="w-12 h-12 text-gray-600 mb-4" />
+                <h3 className="text-lg font-medium text-white mb-2">Connect your GitHub account</h3>
+                <p className="text-gray-400 max-w-md text-center mb-6">
+                  Connect your GitHub account to automatically analyze your repositories and extract your technical
+                  skills.
+                </p>
+                <button
+                  onClick={() => {
+                    // In a real app, this would trigger GitHub OAuth
+                    // For demo purposes, we'll just simulate connecting
+                    setIsGithubConnected(true)
+                    setShowGithubConnectPrompt(false)
+                  }}
+                  className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white transition-colors duration-300 rounded-md text-sm font-medium"
+                >
+                  <Github className="w-4 h-4 mr-2" />
+                  Connect GitHub Account
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Manage Skills Tab */}
+      {activeTab === "manage" && (
+        <div className="bg-black/40 backdrop-blur-sm border border-gray-800 rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+            <h3 className="text-lg font-medium text-white">Manage Your Skills</h3>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setIsAddingSkill(true)}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white transition-colors duration-300 rounded-md text-xs font-medium flex items-center"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Add New Skill
+              </button>
+            </div>
+          </div>
+
+          <div className="p-5">
+            {/* Search and Filter */}
+            <div className="flex flex-col md:flex-row gap-3 mb-6">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-500" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search skills..."
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 bg-gray-900/60 border border-gray-700 rounded-md shadow-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                />
+              </div>
+
               <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium ${
+                    selectedCategory === null
+                      ? "bg-emerald-600 text-white"
+                      : "bg-gray-900/60 text-gray-400 border border-gray-700 hover:bg-gray-800"
+                  }`}
+                >
+                  All
+                </button>
                 {skillCategories.map((category) => (
                   <button
                     key={category.value}
-                    onClick={() => setActiveCategory(activeCategory === category.value ? null : category.value)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                      activeCategory === category.value
-                        ? `bg-${category.color}/20 text-${category.color} border-${category.color}/30`
-                        : "bg-[#21262d] text-[#c9d1d9] border-[#30363d] hover:bg-[#30363d]"
+                    onClick={() => setSelectedCategory(selectedCategory === category.value ? null : category.value)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium ${
+                      selectedCategory === category.value
+                        ? "bg-emerald-600 text-white"
+                        : "bg-gray-900/60 text-gray-400 border border-gray-700 hover:bg-gray-800"
                     }`}
-                    style={{
-                      backgroundColor: activeCategory === category.value ? `${category.color}20` : undefined,
-                      color: activeCategory === category.value ? category.color : undefined,
-                      borderColor: activeCategory === category.value ? `${category.color}30` : undefined,
-                    }}
                   >
                     {category.label}s
                   </button>
                 ))}
               </div>
-
-              <div className="mt-4 space-y-3 max-h-40 overflow-y-auto pr-2">
-                {Object.entries(skillsByCategory)
-                  .filter(([category]) => !activeCategory || category === activeCategory)
-                  .map(([category, categorySkills]) => (
-                    <div key={category}>
-                      {activeCategory === null && (
-                        <h5
-                          className="text-sm font-medium text-[#c9d1d9] mb-2"
-                          style={{ color: getCategoryColor(category) }}
-                        >
-                          {skillCategories.find((c) => c.value === category)?.label || category}
-                        </h5>
-                      )}
-                      {categorySkills.map((skill) => (
-                        <div key={skill.name} className="flex items-center mb-2">
-                          <span className="text-sm text-[#c9d1d9] flex-1">{skill.name}</span>
-                          <div className="w-24 h-2 bg-[#21262d] rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${skill.proficiency}%`,
-                                backgroundColor: getCategoryColor(category),
-                              }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {isEditing ? (
-        <form onSubmit={handleSubmit} className="space-y-6 bg-[#0d1117] border border-[#30363d] rounded-md p-4">
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {skills.map((skill) => (
-                <div
-                  key={skill.name}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border"
-                  style={{
-                    backgroundColor: `${getCategoryColor(skill.category)}20`,
-                    color: getCategoryColor(skill.category),
-                    borderColor: `${getCategoryColor(skill.category)}30`,
-                  }}
-                >
-                  <span>{skill.name}</span>
+            {/* Add Skill Form */}
+            {isAddingSkill && (
+              <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800 mb-6 animate-in slide-in-from-top duration-300">
+                <h4 className="text-sm font-medium text-white mb-3">Add New Skill</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="newSkill" className="block text-xs font-medium text-gray-400 mb-1">
+                      Skill Name
+                    </label>
+                    <input
+                      id="newSkill"
+                      ref={skillInputRef}
+                      value={newSkill}
+                      onChange={(e) => setNewSkill(e.target.value)}
+                      className="block w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-md shadow-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                      placeholder="e.g., JavaScript, React, AWS"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="skillCategory" className="block text-xs font-medium text-gray-400 mb-1">
+                      Category
+                    </label>
+                    <select
+                      id="skillCategory"
+                      value={newSkillCategory}
+                      onChange={(e) => setNewSkillCategory(e.target.value)}
+                      className="block w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-md shadow-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                    >
+                      {skillCategories.map((category) => (
+                        <option key={category.value} value={category.value}>
+                          {category.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label htmlFor="skillLevel" className="block text-xs font-medium text-gray-400 mb-1">
+                      Skill Level
+                    </label>
+                    <select
+                      id="skillLevel"
+                      value={newSkillLevel}
+                      onChange={(e) => setNewSkillLevel(e.target.value)}
+                      className="block w-full px-3 py-2 bg-gray-900/60 border border-gray-700 rounded-md shadow-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                    >
+                      {skillLevels.map((level) => (
+                        <option key={level} value={level}>
+                          {level}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="skillProficiency" className="block text-xs font-medium text-gray-400 mb-1">
+                      Proficiency: {newSkillProficiency}%
+                    </label>
+                    <input
+                      id="skillProficiency"
+                      type="range"
+                      min="10"
+                      max="100"
+                      value={newSkillProficiency}
+                      onChange={(e) => setNewSkillProficiency(Number.parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
                   <button
                     type="button"
-                    onClick={() => removeSkill(skill.name)}
-                    className="ml-1 text-[#8b949e] hover:text-[#c9d1d9]"
+                    onClick={() => setIsAddingSkill(false)}
+                    className="px-3 py-1.5 bg-gray-800 text-gray-300 text-xs font-medium border border-gray-700 rounded-md hover:bg-gray-700 transition-colors duration-300"
                   >
-                    <X className="w-3 h-3" />
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddSkill}
+                    disabled={!newSkill.trim()}
+                    className="px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-md hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+                  >
+                    Add Skill
                   </button>
                 </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="newSkill" className="block text-sm font-medium text-[#c9d1d9] mb-1">
-                  Add Skill
-                </label>
-                <input
-                  id="newSkill"
-                  value={newSkill}
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  className="block w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md shadow-sm text-[#c9d1d9] focus:outline-none focus:ring-1 focus:ring-[#1f6feb] focus:border-[#1f6feb] sm:text-sm"
-                  placeholder="e.g., JavaScript, React, AWS"
-                />
               </div>
+            )}
 
-              <div>
-                <label htmlFor="skillCategory" className="block text-sm font-medium text-[#c9d1d9] mb-1">
-                  Category
-                </label>
-                <select
-                  id="skillCategory"
-                  value={newSkillCategory}
-                  onChange={(e) => setNewSkillCategory(e.target.value)}
-                  className="block w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md shadow-sm text-[#c9d1d9] focus:outline-none focus:ring-1 focus:ring-[#1f6feb] focus:border-[#1f6feb] sm:text-sm"
-                >
-                  {skillCategories.map((category) => (
-                    <option key={category.value} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
+            {/* Skills List */}
+            {filteredSkills.length > 0 ? (
+              <div className="space-y-4">
+                {skillCategories
+                  .filter((category) => !selectedCategory || selectedCategory === category.value)
+                  .map((category) => {
+                    const categorySkills = filteredSkills.filter((skill) => skill.category === category.value)
+                    if (categorySkills.length === 0) return null
+
+                    return (
+                      <div key={category.value} className="bg-gray-900/30 p-4 rounded-lg border border-gray-800">
+                        <h4 className="text-sm font-medium text-gray-300 mb-3">{category.label}s</h4>
+                        <div className="space-y-3">
+                          {categorySkills.map((skill) => (
+                            <div key={skill.name} className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <SkillBadge skill={skill} size="md" />
+                                {skill.githubVerified && (
+                                  <span className="text-xs text-emerald-500 flex items-center">
+                                    <Github className="w-3 h-3 mr-1" />
+                                    Verified
+                                  </span>
+                                )}
+                                {skill.manuallyAdded && <span className="text-xs text-purple-400">Manually added</span>}
+                              </div>
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <span className="text-xs text-gray-400 mr-2">{skill.level}</span>
+                                  <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full"
+                                      style={{
+                                        width: `${skill.proficiency || 50}%`,
+                                        backgroundColor:
+                                          getCategoryColor(category.value) === "blue"
+                                            ? "#3b82f6"
+                                            : getCategoryColor(category.value) === "purple"
+                                              ? "#a855f7"
+                                              : getCategoryColor(category.value) === "orange"
+                                                ? "#f97316"
+                                                : getCategoryColor(category.value) === "red"
+                                                  ? "#ef4444"
+                                                  : getCategoryColor(category.value) === "green"
+                                                    ? "#10b981"
+                                                    : "#3b82f6",
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleRemoveSkill(skill.name)}
+                                  className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                                  aria-label={`Remove ${skill.name}`}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="skillLevel" className="block text-sm font-medium text-[#c9d1d9] mb-1">
-                  Skill Level
-                </label>
-                <select
-                  id="skillLevel"
-                  value={newSkillLevel}
-                  onChange={(e) => setNewSkillLevel(e.target.value)}
-                  className="block w-full px-3 py-2 bg-[#0d1117] border border-[#30363d] rounded-md shadow-sm text-[#c9d1d9] focus:outline-none focus:ring-1 focus:ring-[#1f6feb] focus:border-[#1f6feb] sm:text-sm"
-                >
-                  {skillLevels.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-400">{skillSearch ? "No skills match your search" : "No skills added yet"}</p>
+                {skillSearch && (
+                  <button onClick={() => setSkillSearch("")} className="mt-2 text-emerald-400 text-sm hover:underline">
+                    Clear search
+                  </button>
+                )}
               </div>
-
-              <div>
-                <label htmlFor="skillProficiency" className="block text-sm font-medium text-[#c9d1d9] mb-1">
-                  Proficiency: {newSkillProficiency}%
-                </label>
-                <input
-                  id="skillProficiency"
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={newSkillProficiency}
-                  onChange={(e) => setNewSkillProficiency(Number.parseInt(e.target.value))}
-                  className="w-full h-2 bg-[#21262d] rounded-lg appearance-none cursor-pointer accent-[#1f6feb]"
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={addSkill}
-              className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-md text-sm font-medium text-[#c9d1d9] hover:bg-[#30363d] hover:border-[#8b949e] transition-colors duration-200"
-              disabled={!newSkill.trim()}
-            >
-              <Plus className="w-4 h-4 inline-block mr-1" /> Add Skill
-            </button>
+            )}
           </div>
+        </div>
+      )}
 
-          <div className="flex space-x-2 pt-2">
+      {/* GitHub Connect Prompt (if not connected and not in GitHub tab) */}
+      {showGithubConnectPrompt && !isGithubConnected && activeTab !== "github" && (
+        <div className="bg-gray-900/30 p-4 rounded-lg border border-gray-800 flex items-center justify-between">
+          <div className="flex items-center">
+            <Github className="w-5 h-5 text-gray-400 mr-3" />
+            <div>
+              <p className="text-sm text-white">Connect your GitHub account</p>
+              <p className="text-xs text-gray-400">Automatically analyze your repositories to extract skills</p>
+            </div>
+          </div>
+          <div className="flex space-x-2">
             <button
-              type="submit"
-              className="px-4 py-2 bg-[#238636] text-white text-sm font-medium rounded-md hover:bg-[#2ea043] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0d1117] focus:ring-[#238636]"
+              onClick={() => setShowGithubConnectPrompt(false)}
+              className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-300"
             >
-              Save Skills
+              Dismiss
             </button>
             <button
-              type="button"
               onClick={() => {
-                setSkills(userData.skills)
-                setIsEditing(false)
+                setIsGithubConnected(true)
+                setActiveTab("github")
+                setShowGithubConnectPrompt(false)
               }}
-              className="px-4 py-2 bg-[#21262d] text-[#c9d1d9] text-sm font-medium border border-[#30363d] rounded-md hover:bg-[#30363d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0d1117] focus:ring-[#1f6feb]"
+              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white transition-colors duration-300 rounded-md text-xs font-medium"
             >
-              Cancel
+              Connect
             </button>
           </div>
-        </form>
-      ) : (
-        <div className="space-y-4">
-          <button
-            onClick={() => setIsEditing(true)}
-            className="px-4 py-2 bg-[#21262d] border border-[#30363d] rounded-md text-sm font-medium text-[#c9d1d9] hover:bg-[#30363d] hover:border-[#8b949e] transition-colors duration-200"
-          >
-            Edit Technical Skills
-          </button>
         </div>
       )}
     </div>

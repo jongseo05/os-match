@@ -3,6 +3,9 @@
 import { supabase } from './supabase/supabase';
 import type { UserData, Skill } from '../types/user';
 
+// 현재 스킬 업데이트가 진행 중인 사용자 ID를 추적하기 위한 Set
+const skillUpdateInProgress = new Set<string>();
+
 /**
  * 사용자 프로필이 존재하는지 확인하는 함수
  * @param userId 사용자 ID
@@ -164,72 +167,123 @@ export async function getUserProfile(userId: string): Promise<UserData | null> {
  * @param userData 업데이트할 사용자 데이터
  */
 export async function updateUserProfile(userId: string, userData: Partial<UserData>): Promise<boolean> {
-  try {    // 프로필 테이블에 저장할 데이터 준비
-    const profileData = {
-      nickname: userData.nickname,
-      real_name: userData.realName,
-      bio: userData.bio,
-      github_connected: userData.githubConnected,
-      github_username: userData.githubUsername,
-      region: userData.region,
-      timezone: userData.timezone,
-      profile_visibility: userData.privacy?.profileVisibility,
-      show_real_name: userData.privacy?.showRealName,
-      show_email: userData.privacy?.showEmail,
-      latitude: userData.latitude,
-      longitude: userData.longitude,
-      country: userData.country,
-      city: userData.city,
-    };// 프로필 정보 업데이트 - id 필드 사용
-    const { error } = await supabase
-      .from('user_profiles')
-      .update(profileData)
-      .eq('id', userId);
+  try {
+    // 프로필 테이블에 저장할 데이터 준비 (기존과 동일)
+    const profileDataToUpdate: any = {};
+    if (userData.nickname !== undefined) profileDataToUpdate.nickname = userData.nickname;
+    if (userData.realName !== undefined) profileDataToUpdate.real_name = userData.realName;
+    if (userData.bio !== undefined) profileDataToUpdate.bio = userData.bio;
+    if (userData.githubConnected !== undefined) profileDataToUpdate.github_connected = userData.githubConnected;
+    if (userData.githubUsername !== undefined) profileDataToUpdate.github_username = userData.githubUsername;
+    if (userData.region !== undefined) profileDataToUpdate.region = userData.region;
+    if (userData.timezone !== undefined) profileDataToUpdate.timezone = userData.timezone;
+    if (userData.privacy?.profileVisibility !== undefined) profileDataToUpdate.profile_visibility = userData.privacy.profileVisibility;
+    if (userData.privacy?.showRealName !== undefined) profileDataToUpdate.show_real_name = userData.privacy.showRealName;
+    if (userData.privacy?.showEmail !== undefined) profileDataToUpdate.show_email = userData.privacy.showEmail;
+    if (userData.latitude !== undefined) profileDataToUpdate.latitude = userData.latitude;
+    if (userData.longitude !== undefined) profileDataToUpdate.longitude = userData.longitude;
+    if (userData.country !== undefined) profileDataToUpdate.country = userData.country;
+    if (userData.city !== undefined) profileDataToUpdate.city = userData.city;
+    
+    // 업데이트할 필드가 있는 경우에만 프로필 업데이트 실행
+    if (Object.keys(profileDataToUpdate).length > 0) {
+        profileDataToUpdate.updated_at = new Date().toISOString(); // updated_at 타임스탬프 추가
+        const { error: profileUpdateError } = await supabase
+            .from('user_profiles')
+            .update(profileDataToUpdate)
+            .eq('id', userId);
 
-    if (error) {
-      console.error('프로필 정보를 업데이트하는 중 에러 발생:', error);
-      return false;
+        if (profileUpdateError) {
+            console.error('프로필 정보를 업데이트하는 중 에러 발생:', profileUpdateError);
+            return false;
+        }
     }
 
-    // 기술 스택 정보가 포함된 경우 업데이트
-    if (userData.skills && userData.skills.length > 0) {      try {
-        // 기존 기술 스택 정보 삭제
-        const { error: deleteError } = await supabase
+    // 기술 스택 정보가 payload에 포함된 경우에만 기술 스택 업데이트 로직 실행
+    if (userData.skills !== undefined) {
+      // 동시 실행 방지 로직 시작
+      if (skillUpdateInProgress.has(userId)) {
+        console.warn(`Skill update for user_id: ${userId} is already in progress. Skipping this call.`);
+        // 현재는 동시 호출을 오류로 처리하지 않고, 단순히 건너뛰도록 합니다.
+        // 필요에 따라 false를 반환하여 호출자에게 실패를 알릴 수도 있습니다.
+        return true; 
+      }
+      skillUpdateInProgress.add(userId);
+      console.log(`Skill update lock acquired for user_id: ${userId}`);
+      // 동시 실행 방지 로직 끝
+
+      try {
+        // 1. 기존 기술 스택 정보 모두 삭제
+        console.log(`Attempting to delete existing skills for user_id: ${userId}`);
+        const { data: deletedData, error: deleteError } = await supabase
           .from('user_skills')
           .delete()
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .select(); // 삭제된 행에 대한 정보를 반환받기 위해 .select() 추가
 
         if (deleteError) {
-          console.error('기존 기술 스택 정보를 삭제하는 중 에러 발생:', deleteError);
-          // 에러가 있어도 계속 진행 (테이블이 없을 수 있음)
+          console.error('기존 기술 스택 정보를 삭제하는 중 에러 발생 (raw):', deleteError);
+          console.error('기존 기술 스택 정보를 삭제하는 중 에러 발생 (stringified):', JSON.stringify(deleteError, null, 2));
+          return false; // 삭제 실패는 치명적이므로 중단
+        } else {
+          console.log(`Supabase delete operation for user_id: ${userId} completed without error.`);
+          console.log('Deleted skills data (from Supabase):', JSON.stringify(deletedData, null, 2));
+          if (deletedData && deletedData.length > 0) {
+            console.log(`Number of skills reported as deleted: ${deletedData.length}`);
+            if (deletedData.some(skill => skill.name === 'React')) {
+              console.log("The 'React' skill was reported as deleted by Supabase among the deleted items.");
+            } else {
+              console.log("The 'React' skill was NOT found among the items reported as deleted by Supabase.");
+            }
+          } else {
+            console.log("No skills were reported as deleted by Supabase (deletedData is null, undefined, or empty).");
+          }
         }
-      } catch (err) {
-        console.error('기술 스택 정보 삭제 중 예외 발생:', err);
-        // 계속 진행
-      }
 
-      // 새 기술 스택 정보 추가
-      const skillsData = userData.skills.map(skill => ({
-        user_id: userId,
-        name: skill.name,
-        level: skill.level,
-        category: skill.category,
-        proficiency: skill.proficiency
-      }));
+        // 2. 새 기술 스택 정보 추가 (userData.skills가 빈 배열이 아닌 경우)
+        if (userData.skills.length > 0) {
+          const uniqueSkillsMap = new Map<string, Skill>();
+          for (const skill of userData.skills) {
+            if (skill.name) { 
+              uniqueSkillsMap.set(skill.name, skill);
+            }
+          }
+          const skillsToInsert = Array.from(uniqueSkillsMap.values());
 
-      const { error: insertError } = await supabase
-        .from('user_skills')
-        .insert(skillsData);
+          if (skillsToInsert.length > 0) {
+            console.log(`Attempting to insert new skills for user_id: ${userId}`, JSON.stringify(skillsToInsert, null, 2));
+            const { error: insertError } = await supabase
+              .from('user_skills')
+              .insert(skillsToInsert.map(skill => ({
+                user_id: userId,
+                name: skill.name,
+                level: skill.level || '중',
+                category: skill.category || '기타',
+                proficiency: skill.proficiency || 50,
+              })));
 
-      if (insertError) {
-        console.error('기술 스택 정보를 추가하는 중 에러 발생:', insertError);
-        return false;
+            if (insertError) {
+              console.error('새 기술 스택 정보를 추가하는 중 에러 발생 (raw):', insertError);
+              console.error('새 기술 스택 정보를 추가하는 중 에러 발생 (stringified):', JSON.stringify(insertError, null, 2));
+              return false;
+            }
+            console.log(`Successfully inserted new skills for user_id: ${userId}`);
+          }
+        }
+      } finally {
+        skillUpdateInProgress.delete(userId);
+        console.log(`Skill update lock released for user_id: ${userId}`);
       }
     }
 
     return true;
   } catch (error) {
-    console.error('사용자 프로필을 업데이트하는 중 에러 발생:', error);
+    console.error('사용자 프로필을 업데이트하는 중 예외 발생:', error);
+    // 스킬 업데이트 시도 중 외부 try-catch에서 에러가 잡힌 경우에도 잠금 해제 시도
+    if (userData.skills !== undefined && skillUpdateInProgress.has(userId)) {
+        skillUpdateInProgress.delete(userId);
+        console.log(`Skill update lock released for user_id: ${userId} due to outer catch.`);
+    }
     return false;
   }
 }
