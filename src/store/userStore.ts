@@ -15,9 +15,11 @@ interface UserState {
   login: (userData: User) => void;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  githubUsername: string | null; // Add this line
+  setGithubUsername: (username: string | null) => void; // Add this line
 }
 
-// persist 미들웨어를 사용하여 로컬 스토리지에 상태 저장
+
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
@@ -40,6 +42,8 @@ export const useUserStore = create<UserState>()(
       updateUser: (userData) => set((state) => ({
         user: state.user ? { ...state.user, ...userData } : null
       })),
+      githubUsername: null, // Add this line
+      setGithubUsername: (username) => set({ githubUsername: username }), // Add this line
     }),
     {
       name: 'user-storage', // 로컬 스토리지에 저장될 키 이름

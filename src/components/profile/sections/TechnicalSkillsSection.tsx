@@ -17,9 +17,10 @@ import {
 interface TechnicalSkillsSectionProps {
   userData: UserData
   onUpdate: (data: Partial<UserData>) => void
+  updateUserGithubUsername: (username: string | null) => void; // Add this line
 }
 
-export default function TechnicalSkillsSection({ userData, onUpdate }: TechnicalSkillsSectionProps) {
+export default function TechnicalSkillsSection({ userData, onUpdate, updateUserGithubUsername }: TechnicalSkillsSectionProps) {
   // Skills state
   const [skills, setSkills] = useState<Skill[]>(userData.skills || [])
   const [filteredSkills, setFilteredSkills] = useState<Skill[]>(skills)
@@ -191,6 +192,22 @@ export default function TechnicalSkillsSection({ userData, onUpdate }: Technical
     const found = skillCategories.find((c) => c.value === category)
     return found ? found.color : "blue"
   }
+
+  const handleConnectGithub = async () => {
+    if (userData.githubUsername) {
+      await fetchGithubData(userData.githubUsername);
+    } else {
+      // If no username, maybe prompt the user or use the updateUserGithubUsername function
+      // For now, let's assume we want to prompt for a username if it's missing.
+      const newUsername = prompt("Please enter your GitHub username:");
+      if (newUsername) {
+        updateUserGithubUsername(newUsername); // Update in store and parent
+        await fetchGithubData(newUsername); // Fetch data with new username
+      } else {
+        setAnalyzeError("GitHub username is required to connect.");
+      }
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -661,16 +678,32 @@ export default function TechnicalSkillsSection({ userData, onUpdate }: Technical
                 </p>
                 <button
                   onClick={() => {
-                    // In a real app, this would trigger GitHub OAuth
-                    // For demo purposes, we'll just simulate connecting
-                    setIsGithubConnected(true)
-                    setShowGithubConnectPrompt(false)
+                    if (userData.githubUsername) {
+                      setIsGithubConnected(true);
+                      setShowGithubConnectPrompt(false);
+                      fetchGithubData(userData.githubUsername);
+                    } else {
+                      console.warn("GitHub username is missing in userData.");
+                      setAnalyzeError("GitHub username is not configured. Please set it up in your profile or connect your account via OAuth (not yet implemented).");
+                      // Optionally, do not set isGithubConnected to true here
+                      // and do not hide the prompt if username is missing.
+                      // For now, we'll allow the UI to change to connected state
+                      // but show an error.
+                       setIsGithubConnected(true); // Or keep false if preferred UX
+                       setShowGithubConnectPrompt(false); // Or keep true
+                    }
                   }}
                   className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white transition-colors duration-300 rounded-md text-sm font-medium"
                 >
                   <Github className="w-4 h-4 mr-2" />
                   Connect GitHub Account
                 </button>
+                {analyzeError && !isAnalyzing && ( // Show error if connection failed due to missing username
+                  <div className="mt-4 p-3 bg-red-900/20 border border-red-800 rounded-md flex items-start max-w-md">
+                    <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                    <p className="text-red-400 text-sm">{analyzeError}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -12,9 +12,10 @@ import type { UserData } from "../../types/user"
 interface ProfileContentProps {
   userData: UserData
   onUpdate: (data: Partial<UserData>) => void
+  updateUserGithubUsername: (username: string | null) => void; // Add this line
 }
 
-export default function ProfileContent({ userData, onUpdate }: ProfileContentProps) {
+export default function ProfileContent({ userData, onUpdate, updateUserGithubUsername }: ProfileContentProps) {
   const [activeTab, setActiveTab] = useState("basic")
   const tabs = [
     { id: "basic", label: "Basic Information", icon: User },
@@ -48,7 +49,7 @@ export default function ProfileContent({ userData, onUpdate }: ProfileContentPro
         {activeTab === "contact" && <ContactInfoSection userData={userData} onUpdate={onUpdate} />}
         {activeTab === "location" && <LocationSection userData={userData} onUpdate={onUpdate} />}
         {activeTab === "privacy" && <PrivacySection userData={userData} onUpdate={onUpdate} />}
-        {activeTab === "skills" && <TechnicalSkillsSection userData={userData} onUpdate={onUpdate} />}
+        {activeTab === "skills" && <TechnicalSkillsSection userData={userData} onUpdate={onUpdate} updateUserGithubUsername={updateUserGithubUsername} />}
       </div>
     </div>
   )

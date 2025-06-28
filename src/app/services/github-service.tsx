@@ -50,92 +50,121 @@ const languageColors: Record<string, string> = {
 // Mock function to simulate fetching GitHub repositories
 // In a real app, this would make actual API calls to GitHub
 export async function fetchGithubRepositories(username: string): Promise<GithubRepository[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 1500))
+  if (!username) {
+    console.warn("GitHub username is not provided.")
+    return []
+  }
 
-  // Mock data - in a real app, this would come from the GitHub API
-  return [
-    {
-      name: "react-dashboard",
-      language: "TypeScript",
-      stargazers_count: 42,
-      updated_at: "2023-04-15T10:20:30Z",
-      html_url: "https://github.com/alexj-dev/react-dashboard",
-      description: "A responsive dashboard built with React and TypeScript",
-    },
-    {
-      name: "node-api-starter",
-      language: "JavaScript",
-      stargazers_count: 28,
-      updated_at: "2023-05-20T14:30:45Z",
-      html_url: "https://github.com/alexj-dev/node-api-starter",
-      description: "A starter template for Node.js APIs",
-    },
-    {
-      name: "python-data-analysis",
-      language: "Python",
-      stargazers_count: 15,
-      updated_at: "2023-03-10T09:15:25Z",
-      html_url: "https://github.com/alexj-dev/python-data-analysis",
-      description: "Data analysis tools built with Python",
-    },
-    {
-      name: "go-microservices",
-      language: "Go",
-      stargazers_count: 35,
-      updated_at: "2023-06-05T16:40:55Z",
-      html_url: "https://github.com/alexj-dev/go-microservices",
-      description: "Microservices architecture implemented in Go",
-    },
-    {
-      name: "react-native-app",
-      language: "JavaScript",
-      stargazers_count: 22,
-      updated_at: "2023-05-01T11:25:35Z",
-      html_url: "https://github.com/alexj-dev/react-native-app",
-      description: "Mobile app built with React Native",
-    },
-    {
-      name: "vue-component-library",
-      language: "Vue",
-      stargazers_count: 18,
-      updated_at: "2023-04-25T13:35:40Z",
-      html_url: "https://github.com/alexj-dev/vue-component-library",
-      description: "Reusable Vue.js components",
-    },
-    {
-      name: "rust-cli-tools",
-      language: "Rust",
-      stargazers_count: 12,
-      updated_at: "2023-02-15T08:10:20Z",
-      html_url: "https://github.com/alexj-dev/rust-cli-tools",
-      description: "Command-line tools built with Rust",
-    },
-    {
-      name: "typescript-design-patterns",
-      language: "TypeScript",
-      stargazers_count: 31,
-      updated_at: "2023-06-10T15:45:50Z",
-      html_url: "https://github.com/alexj-dev/typescript-design-patterns",
-      description: "Implementation of design patterns in TypeScript",
-    },
-    {
-      name: "kotlin-android-app",
-      language: "Kotlin",
-      stargazers_count: 19,
-      updated_at: "2023-03-20T10:30:30Z",
-      html_url: "https://github.com/alexj-dev/kotlin-android-app",
-      description: "Android app built with Kotlin",
-    },
-    {
-      name: "css-animations",
-      language: "CSS",
-      stargazers_count: 14,
-      updated_at: "2023-01-25T09:05:15Z",
-      html_url: "https://github.com/alexj-dev/css-animations",
-      description: "Collection of CSS animations and transitions",
-    },
-  ]
+  try {
+    // Simulate API delay
+    // await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    // Mock data - in a real app, this would come from the GitHub API
+    // return [
+    //   {
+    //     name: "react-dashboard",
+    //     language: "TypeScript",
+    //     stargazers_count: 42,
+    //     updated_at: "2023-04-15T10:20:30Z",
+    //     html_url: "https://github.com/alexj-dev/react-dashboard",
+    //     description: "A responsive dashboard built with React and TypeScript",
+    //   },
+    //   {
+    //     name: "node-api-starter",
+    //     language: "JavaScript",
+    //     stargazers_count: 28,
+    //     updated_at: "2023-05-20T14:30:45Z",
+    //     html_url: "https://github.com/alexj-dev/node-api-starter",
+    //     description: "A starter template for Node.js APIs",
+    //   },
+    //   {
+    //     name: "python-data-analysis",
+    //     language: "Python",
+    //     stargazers_count: 15,
+    //     updated_at: "2023-03-10T09:15:25Z",
+    //     html_url: "https://github.com/alexj-dev/python-data-analysis",
+    //     description: "Data analysis tools built with Python",
+    //   },
+    //   {
+    //     name: "go-microservices",
+    //     language: "Go",
+    //     stargazers_count: 35,
+    //     updated_at: "2023-06-05T16:40:55Z",
+    //     html_url: "https://github.com/alexj-dev/go-microservices",
+    //     description: "Microservices architecture implemented in Go",
+    //   },
+    //   {
+    //     name: "react-native-app",
+    //     language: "JavaScript",
+    //     stargazers_count: 22,
+    //     updated_at: "2023-05-01T11:25:35Z",
+    //     html_url: "https://github.com/alexj-dev/react-native-app",
+    //     description: "Mobile app built with React Native",
+    //   },
+    //   {
+    //     name: "vue-component-library",
+    //     language: "Vue",
+    //     stargazers_count: 18,
+    //     updated_at: "2023-04-25T13:35:40Z",
+    //     html_url: "https://github.com/alexj-dev/vue-component-library",
+    //     description: "Reusable Vue.js components",
+    //   },
+    //   {
+    //     name: "rust-cli-tools",
+    //     language: "Rust",
+    //     stargazers_count: 12,
+    //     updated_at: "2023-02-15T08:10:20Z",
+    //     html_url: "https://github.com/alexj-dev/rust-cli-tools",
+    //     description: "Command-line tools built with Rust",
+    //   },
+    //   {
+    //     name: "typescript-design-patterns",
+    //     language: "TypeScript",
+    //     stargazers_count: 31,
+    //     updated_at: "2023-06-10T15:45:50Z",
+    //     html_url: "https://github.com/alexj-dev/typescript-design-patterns",
+    //     description: "Implementation of design patterns in TypeScript",
+    //   },
+    //   {
+    //     name: "kotlin-android-app",
+    //     language: "Kotlin",
+    //     stargazers_count: 19,
+    //     updated_at: "2023-03-20T10:30:30Z",
+    //     html_url: "https://github.com/alexj-dev/kotlin-android-app",
+    //     description: "Android app built with Kotlin",
+    //   },
+    //   {
+    //     name: "css-animations",
+    //     language: "CSS",
+    //     stargazers_count: 14,
+    //     updated_at: "2023-01-25T09:05:15Z",
+    //     html_url: "https://github.com/alexj-dev/css-animations",
+    //     description: "Collection of CSS animations and transitions",
+    //   },
+    // ]
+
+    const response = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&direction=desc`)
+    if (!response.ok) {
+      // For simplicity, log error and return empty.
+      // In a real app, you might want to throw an error or return a more specific error object.
+      console.error(`GitHub API error: ${response.status} ${response.statusText}`)
+      return []
+    }
+    const data = await response.json()
+
+    // Map the API response to our GithubRepository interface
+    return data.map((repo: any) => ({
+      name: repo.name,
+      language: repo.language,
+      stargazers_count: repo.stargazers_count,
+      updated_at: repo.updated_at,
+      html_url: repo.html_url,
+      description: repo.description,
+    }))
+  } catch (error) {
+    console.error("Failed to fetch GitHub repositories:", error)
+    return [] // Return empty array on error
+  }
 }
 
 // Analyze GitHub repositories to extract language statistics and other metrics

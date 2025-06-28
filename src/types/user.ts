@@ -7,6 +7,14 @@ export interface Skill {
   manuallyAdded?: boolean
 }
 
+export interface User {
+  id: string
+  name?: string | null
+  email?: string | null
+  avatar_url?: string | null
+  githubUsername?: string | null // Add this line
+}
+
 export interface UserData {
   nickname: string
   realName: string
